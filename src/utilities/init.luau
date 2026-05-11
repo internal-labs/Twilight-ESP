@@ -45,6 +45,7 @@ end
 
 function functions:GetPlayerColor(root, Player, isVisible, part, additional)
 	local teamType
+
 	if Player.Neutral then
 		teamType = "generic"
 	else
@@ -59,40 +60,88 @@ function functions:GetPlayerColor(root, Player, isVisible, part, additional)
 		teamType = "local"
 	end
 
+	-- Dynamic enemy team colors
+	local teamColor
+	local darkTeamColor
+
+	if teamType == "enemy" and Player.Team then
+		teamColor = Player.Team.TeamColor.Color
+
+		darkTeamColor = Color3.new(
+			teamColor.R * 0.5,
+			teamColor.G * 0.5,
+			teamColor.B * 0.5
+		)
+	end
+
+	-- Health bar fill logic
 	if part == "HealthBar" and additional == "Fill" then
 		if not Player.Character then
 			return
 		end
+
 		local currentHealth = root.Settings.HealthBar.Source(Player, "Health")
 		local maxHealth = root.Settings.HealthBar.Source(Player, "MaxHealth")
+
 		local currentStatus
-		if currentHealth / maxHealth > 65 / 100 then
+
+		if currentHealth / maxHealth > 0.65 then
 			currentStatus = "High"
-		elseif currentHealth / maxHealth > 20 / 100 then
+		elseif currentHealth / maxHealth > 0.20 then
 			currentStatus = "Medium"
 		else
 			currentStatus = "Low"
 		end
+
+		-- Use enemy team color for health fill
+		if teamColor then
+			return isVisible and teamColor or darkTeamColor
+		end
+
 		return root.Settings.currentColors[teamType].HealthBar
 			and root.Settings.currentColors[teamType].HealthBar.Fills[currentStatus]
-	elseif part == "Text" then
+	end
+
+	-- Text coloring
+	if part == "Text" then
+		if teamColor then
+			return isVisible and teamColor or darkTeamColor
+		end
+
 		return root.Settings.currentColors[teamType][part]
-	elseif part == "HealthBar" and additional == "Outline" then
+	end
+
+	-- Health outline
+	if part == "HealthBar" and additional == "Outline" then
 		if not Player.Character then
 			return
 		end
+
+		if teamColor then
+			return darkTeamColor
+		end
+
 		return root.Settings.currentColors[teamType].HealthBar
 				and root.Settings.currentColors[teamType].HealthBar["Outline"]
 			or Color3.new(0, 0, 0)
 	end
 
+	-- Visibility recolor logic
 	if root.Settings.Checks.Visible.Enabled and not isVisible then
+		if teamColor then
+			return darkTeamColor
+		end
+
 		if additional then
 			return root.Settings.currentColors[teamType][part][additional].Invisible
 		else
 			return root.Settings.currentColors[teamType][part].Invisible
 		end
 	else
+		if teamColor then
+			return teamColor
+		end
+
 		if additional then
 			return root.Settings.currentColors[teamType][part][additional].Visible
 		else
